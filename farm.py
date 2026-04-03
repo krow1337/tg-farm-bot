@@ -7,7 +7,6 @@ from pyrogram import Client
 from pyrogram.errors import PhoneCodeInvalid, FloodWait
 from config import API_ID, API_HASH
 
-# === НАСТРОЙКИ ===
 SESSION_DIR = "sessions"
 DELAY_BETWEEN = 30
 COMMON_OTPS = [1234, 12345, 1111, 0000, 123456, 111111]

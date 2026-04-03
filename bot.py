@@ -35,6 +35,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 *TG Farm Bot*\n\n"
         "📌 *Команды:*\n"
+        "/create_folders — создать все необходимые папки\n"
         "/generate_phones <число> — сгенерировать номера\n"
         "/farm <число> — запустить ферму\n"
         "/sessions — количество сессий\n"
@@ -45,11 +46,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/stats — общая статистика\n"
         "/monitor — мониторинг сессий\n\n"
         "⚙️ *Пример:*\n"
+        "/create_folders\n"
         "/generate_phones 500\n"
         "/farm 20\n"
         "/parse крипта",
         parse_mode="Markdown"
     )
+
+async def create_folders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    os.makedirs("sessions", exist_ok=True)
+    os.makedirs("logs", exist_ok=True)
+    os.makedirs("free_data", exist_ok=True)
+    os.makedirs("chats", exist_ok=True)
+    os.makedirs("spam_texts", exist_ok=True)
+    await update.message.reply_text("✅ Все папки созданы:\n- sessions\n- logs\n- free_data\n- chats\n- spam_texts")
 
 async def generate_phones(update: Update, context: ContextTypes.DEFAULT_TYPE):
     count = int(context.args[0]) if context.args else 1000
@@ -80,12 +90,12 @@ async def sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def download_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not os.path.exists("sessions"):
-        await update.message.reply_text("📭 Папка sessions не найдена")
+        await update.message.reply_text("📭 Папка sessions не найдена. Сначала выполни /create_folders")
         return
     
     files = os.listdir("sessions")
     if not files:
-        await update.message.reply_text("📭 Сессий пока нет")
+        await update.message.reply_text("📭 Сессий пока нет. Запусти ферму /farm")
         return
     
     await update.message.reply_text(f"📦 Создаю архив из {len(files)} файлов...")
@@ -182,6 +192,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("create_folders", create_folders))
     app.add_handler(CommandHandler("generate_phones", generate_phones))
     app.add_handler(CommandHandler("farm", farm))
     app.add_handler(CommandHandler("sessions", sessions))
