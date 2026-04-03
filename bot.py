@@ -2,6 +2,8 @@ import os
 import sqlite3
 import asyncio
 import subprocess
+import zipfile
+import io
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -13,6 +15,7 @@ os.makedirs("chats", exist_ok=True)
 os.makedirs("sessions", exist_ok=True)
 os.makedirs("spam_texts", exist_ok=True)
 os.makedirs("free_data", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 # ========== БАЗА ДАННЫХ ==========
 conn = sqlite3.connect("chats/chats.db")
@@ -35,6 +38,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/generate_phones <число> — сгенерировать номера\n"
         "/farm <число> — запустить ферму\n"
         "/sessions — количество сессий\n"
+        "/download_sessions — скачать все сессии архивом\n"
         "/parse <слово> — найти чаты\n"
         "/settext <текст> — текст рассылки\n"
         "/spam — разослать текст\n"
@@ -67,13 +71,37 @@ async def farm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     count = int(context.args[0]) if context.args else 10
     await update.message.reply_text(f"🚜 Запуск фермы на {count} попыток (фон)...")
     
-    # Запуск farm.py в фоне
     subprocess.Popen(["python", "farm.py", str(count)])
     await update.message.reply_text(f"✅ Ферма запущена. Результаты появятся в папке sessions/\n📊 Мониторинг: /sessions")
 
 async def sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     count = count_sessions()
     await update.message.reply_text(f"📁 Всего сессий создано: {count}")
+
+async def download_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not os.path.exists("sessions"):
+        await update.message.reply_text("📭 Папка sessions не найдена")
+        return
+    
+    files = os.listdir("sessions")
+    if not files:
+        await update.message.reply_text("📭 Сессий пока нет")
+        return
+    
+    await update.message.reply_text(f"📦 Создаю архив из {len(files)} файлов...")
+    
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for file in files:
+            file_path = os.path.join("sessions", file)
+            zip_file.write(file_path, file)
+    
+    zip_buffer.seek(0)
+    await update.message.reply_document(
+        document=zip_buffer,
+        filename="sessions.zip",
+        caption=f"📦 Архив с {len(files)} сессиями"
+    )
 
 async def parse(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyword = " ".join(context.args)
@@ -157,6 +185,7 @@ def main():
     app.add_handler(CommandHandler("generate_phones", generate_phones))
     app.add_handler(CommandHandler("farm", farm))
     app.add_handler(CommandHandler("sessions", sessions))
+    app.add_handler(CommandHandler("download_sessions", download_sessions))
     app.add_handler(CommandHandler("parse", parse))
     app.add_handler(CommandHandler("settext", set_spam_text))
     app.add_handler(CommandHandler("spam", spam))
