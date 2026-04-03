@@ -6,7 +6,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from pyrogram import Client
 from config import BOT_TOKEN, API_ID, API_HASH
 
-# База данных
 os.makedirs("chats", exist_ok=True)
 os.makedirs("sessions", exist_ok=True)
 os.makedirs("spam_texts", exist_ok=True)
