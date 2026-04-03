@@ -4,3 +4,4 @@ tgcrypto
 aiohttp
 faker
 requests
+python-dotenv
