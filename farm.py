@@ -28,26 +28,31 @@ async def try_otp(app, phone, phone_hash):
 
 async def create_session(phone):
     session_name = f"{SESSION_DIR}/session_{phone.replace('+','')}"
-    async with Client(session_name, API_ID, API_HASH, workdir=".") as app:
-        try:
-            sent = await app.send_code(phone)
-            if await try_otp(app, phone, sent.phone_code_hash):
-                me = await app.get_me()
-                data = {
-                    "phone": phone,
-                    "user_id": me.id,
-                    "username": me.username or "",
-                    "first_name": me.first_name or ""
-                }
-                with open(f"{session_name}.json", "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2)
-                print(f"✅ {phone} → @{me.username or me.first_name}")
-                return True
-        except FloodWait as e:
-            print(f"⏳ {phone}: флуд, ждём {e.x} сек")
-            await asyncio.sleep(e.x)
-        except Exception as e:
-            print(f"❌ {phone}: {e}")
+    # Используем phone напрямую, без интерактивного ввода
+    app = Client(session_name, API_ID, API_HASH, workdir=".")
+    await app.connect()
+    try:
+        # Отправляем код на указанный номер
+        sent = await app.send_code(phone)
+        if await try_otp(app, phone, sent.phone_code_hash):
+            me = await app.get_me()
+            data = {
+                "phone": phone,
+                "user_id": me.id,
+                "username": me.username or "",
+                "first_name": me.first_name or ""
+            }
+            with open(f"{session_name}.json", "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            print(f"✅ {phone} → @{me.username or me.first_name}")
+            return True
+    except FloodWait as e:
+        print(f"⏳ {phone}: флуд, ждём {e.x} сек")
+        await asyncio.sleep(e.x)
+    except Exception as e:
+        print(f"❌ {phone}: {e}")
+    finally:
+        await app.disconnect()
     return False
 
 async def farm(count=10):
@@ -55,7 +60,7 @@ async def farm(count=10):
     if not phones:
         print("❌ Нет номеров. Сначала выполни /generate_phones")
         return
-    
+
     print(f"🚜 Ферма запущена: {count} попыток")
     for i, phone in enumerate(phones[:count]):
         print(f"\n👉 {i+1}/{count}: {phone}")
